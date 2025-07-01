@@ -319,10 +319,6 @@ app.use((err, req, res, next) => {
   });
 });
 
-app.listen(PORT, () => {
-  console.log(`✅ Backend proxy server is running on http://localhost:${PORT}`);
-  console.log(`🔑 DeepSeek API Key configured: ${!!process.env.DEEPSEEK_API_KEY}`);
-  console.log(`🌐 Frontend URL: ${process.env.FRONTEND_URL}`);
-});
+
 
 module.exports = app;
