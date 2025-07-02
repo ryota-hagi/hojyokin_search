@@ -753,11 +753,23 @@ JSONのみを返してください:
     }
 
     // DeepSeekに結果を分析してもらう
+    // 必要な情報のみを抽出してデータサイズを削減
+    const simplifiedResults = allResults.map(s => ({
+      id: s.id,
+      title: s.title,
+      subsidy_max_limit: s.subsidy_max_limit,
+      use_purpose: s.use_purpose,
+      industry: s.industry,
+      target_area_search: s.target_area_search,
+      target_number_of_employees: s.target_number_of_employees,
+      description: s.description ? s.description.substring(0, 200) : ''
+    }));
+    
     const analysisPrompt = `
 以下の補助金検索結果とユーザーのニーズを踏まえて、最適な補助金を5-8件程度選んで提案してください。多様な選択肢を提供してください：
 
 ユーザーのニーズ：${userNeeds}
-検索結果：${JSON.stringify(allResults)}
+検索結果（${allResults.length}件）：${JSON.stringify(simplifiedResults.slice(0, 20))}
 
 JSONのみを返してください：
 {
