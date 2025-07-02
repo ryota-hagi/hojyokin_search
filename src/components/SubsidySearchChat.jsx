@@ -18,6 +18,8 @@ const SubsidySearchChat = () => {
   });
   const [questionCount, setQuestionCount] = useState(0);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [selectedOptions, setSelectedOptions] = useState([]);
+  const [allowMultiSelect, setAllowMultiSelect] = useState(false);
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
 
@@ -314,22 +316,28 @@ ${apiSpec}
         console.error('Original response:', response);
         console.error('Cleaned response:', cleanedResponse);
         
-        // フォールバック
+        // フォールバック - 簡略化された質問フロー
         data = {
-          response: 'こんにちは！補助金検索のお手伝いをさせていただきます😊\n\n補助金探しって面倒ですよね...でも大丈夫！簡単な質問にお答えいただくだけで、あなたにピッタリの補助金を見つけますよ✨\n\nまず最初に、どんなことで補助金を使いたいか教えてください。下から選んでもらえればOKです！',
+          response: 'こんにちは！補助金検索のお手伝いをします😊\n\n簡単な情報を教えていただければ、あなたにピッタリの補助金を見つけます！\n\n以下から当てはまるものを**複数選択**してください：',
           quickOptions: [
-            { label: '🏢 新しい事業を始めたい', value: '新たな事業を行いたい' },
-            { label: '📈 既存事業を拡大したい', value: '既存事業の拡大を検討しています' },
-            { label: '💻 IT化・DXを進めたい', value: '設備整備・IT導入をしたい' },
-            { label: '🌍 販路拡大・海外展開したい', value: '販路拡大・海外展開をしたい' },
-            { label: '🔬 研究開発を行いたい', value: '研究開発・実証事業を行いたい' }
-          ]
+            { label: '🏢 新事業・起業', value: '新たな事業を行いたい', category: 'purpose' },
+            { label: '📈 事業拡大', value: '既存事業の拡大を検討しています', category: 'purpose' },
+            { label: '💻 IT化・DX', value: '設備整備・IT導入をしたい', category: 'purpose' },
+            { label: '🌍 販路拡大・海外', value: '販路拡大・海外展開をしたい', category: 'purpose' },
+            { label: '🔬 研究開発', value: '研究開発・実証事業を行いたい', category: 'purpose' },
+            { label: '🏭 製造業', value: '製造業', category: 'industry' },
+            { label: '🛒 小売・サービス業', value: '小売・サービス業', category: 'industry' },
+            { label: '💼 その他業種', value: 'その他業種', category: 'industry' },
+            { label: '🚀 今すぐ検索する', value: 'search_now', category: 'action' }
+          ],
+          allowMultiSelect: true
         };
       }
       
       addMessage('bot', data.response);
       if (data.quickOptions) {
         setQuickOptions(data.quickOptions);
+        setAllowMultiSelect(data.allowMultiSelect || false);
       }
       updateContext('assistant', data.response);
     } catch (error) {
@@ -560,6 +568,7 @@ JSONのみを返してください:
 
       if (data.quickOptions && data.quickOptions.length > 0) {
         setQuickOptions(data.quickOptions);
+        setAllowMultiSelect(data.allowMultiSelect || false);
       }
 
       if (data.shouldSearch === true && data.multipleSearchParams && data.multipleSearchParams.length > 0) {
@@ -584,9 +593,39 @@ JSONのみを返してください:
   };
 
   const handleQuickOption = (option) => {
-    if (!isLoading) {
+    if (isLoading) return;
+
+    // 即座に検索する場合
+    if (option.value === 'search_now') {
+      if (selectedOptions.length > 0) {
+        const combinedValue = selectedOptions.map(opt => opt.value).join('、');
+        addMessage('user', `選択した条件：${combinedValue}`);
+        processUserInput(combinedValue);
+      } else {
+        addMessage('user', '今すぐ検索したいです');
+        processUserInput('今すぐ検索したいです');
+      }
+      setSelectedOptions([]);
+      setAllowMultiSelect(false);
+      return;
+    }
+
+    // 複数選択モードの場合
+    if (allowMultiSelect) {
+      const isSelected = selectedOptions.some(selected => selected.value === option.value);
+      
+      if (isSelected) {
+        // 選択解除
+        setSelectedOptions(prev => prev.filter(selected => selected.value !== option.value));
+      } else {
+        // 選択追加
+        setSelectedOptions(prev => [...prev, option]);
+      }
+    } else {
+      // 単一選択モード
       addMessage('user', option.value);
       processUserInput(option.value);
+      setSelectedOptions([]);
     }
   };
 
@@ -715,7 +754,7 @@ JSONのみを返してください:
 
     // DeepSeekに結果を分析してもらう
     const analysisPrompt = `
-以下の補助金検索結果とユーザーのニーズを踏まえて、最適な補助金を3-5件程度選んで提案してください：
+以下の補助金検索結果とユーザーのニーズを踏まえて、最適な補助金を5-8件程度選んで提案してください。多様な選択肢を提供してください：
 
 ユーザーのニーズ：${userNeeds}
 検索結果：${JSON.stringify(allResults)}
@@ -740,6 +779,7 @@ JSONのみを返してください：
       
       let detailedMessage = analysisData.response + '\n\n';
       
+      // 推奨された補助金を最初に表示
       analysisData.recommendedSubsidies.forEach((rec, index) => {
         const subsidy = allResults.find(s => s.id === rec.id);
         if (subsidy) {
@@ -751,6 +791,20 @@ JSONのみを返してください：
           detailedMessage += `🔗 詳細：${subsidy.detailUrl}\n`;
         }
       });
+
+      // 推奨以外の関連補助金も表示（最大8件まで）
+      const recommendedIds = analysisData.recommendedSubsidies.map(r => r.id);
+      const otherSubsidies = allResults.filter(s => !recommendedIds.includes(s.id)).slice(0, 8);
+      
+      if (otherSubsidies.length > 0) {
+        detailedMessage += `\n\n【その他の関連補助金】\n`;
+        otherSubsidies.forEach((subsidy, index) => {
+          detailedMessage += `\n${index + 1}. ${subsidy.title}\n`;
+          detailedMessage += `💰 補助額上限：${subsidy.subsidy_max_limit ? subsidy.subsidy_max_limit.toLocaleString() + '円' : '要確認'}\n`;
+          detailedMessage += `📅 募集期間：${subsidy.acceptance_start_datetime ? new Date(subsidy.acceptance_start_datetime).toLocaleDateString('ja-JP') : '要確認'} ～ ${subsidy.acceptance_end_datetime ? new Date(subsidy.acceptance_end_datetime).toLocaleDateString('ja-JP') : '要確認'}\n`;
+          detailedMessage += `🔗 詳細：${subsidy.detailUrl}\n`;
+        });
+      }
 
       addMessage('bot', detailedMessage, { 
         results: allResults,
@@ -956,19 +1010,53 @@ ${allResults.slice(0, 5).map((subsidy, index) => `
       {quickOptions.length > 0 && !isLoading && (
         <div className="bg-gray-50 border-t">
           <div className="max-w-4xl mx-auto px-4 py-4">
-            <div className="text-sm text-gray-600 mb-3">以下から選択してください：</div>
+            <div className="text-sm text-gray-600 mb-3">
+              {allowMultiSelect ? '複数選択可能です（選択後「今すぐ検索する」を押してください）：' : '以下から選択してください：'}
+            </div>
+            
+            {/* 選択済みのオプションを表示 */}
+            {allowMultiSelect && selectedOptions.length > 0 && (
+              <div className="mb-3">
+                <div className="text-xs text-gray-500 mb-2">選択済み：</div>
+                <div className="flex flex-wrap gap-2">
+                  {selectedOptions.map((selected, index) => (
+                    <span key={index} className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-indigo-100 text-indigo-800">
+                      {selected.label}
+                      <button
+                        onClick={() => handleQuickOption(selected)}
+                        className="ml-1 text-indigo-600 hover:text-indigo-800"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+            
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-              {quickOptions.map((option, index) => (
-                <button
-                  key={index}
-                  onClick={() => handleQuickOption(option)}
-                  className="text-left px-4 py-3 bg-white border border-gray-300 rounded-lg hover:bg-indigo-50 hover:border-indigo-300 transition-colors duration-200 group"
-                >
-                  <span className="text-gray-800 group-hover:text-indigo-700">
-                    {option.label}
-                  </span>
-                </button>
-              ))}
+              {quickOptions.map((option, index) => {
+                const isSelected = selectedOptions.some(selected => selected.value === option.value);
+                const isActionButton = option.category === 'action';
+                
+                return (
+                  <button
+                    key={index}
+                    onClick={() => handleQuickOption(option)}
+                    className={`text-left px-4 py-3 border rounded-lg transition-colors duration-200 ${
+                      isActionButton
+                        ? 'bg-indigo-600 text-white border-indigo-600 hover:bg-indigo-700'
+                        : isSelected
+                        ? 'bg-indigo-100 border-indigo-300 text-indigo-800'
+                        : 'bg-white border-gray-300 text-gray-800 hover:bg-indigo-50 hover:border-indigo-300'
+                    }`}
+                  >
+                    <span className={isActionButton ? 'text-white' : ''}>
+                      {option.label}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>
