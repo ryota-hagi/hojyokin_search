@@ -379,34 +379,50 @@ ${apiSpec}
     setConversationContext(prev => [...prev, { role, content }]);
   };
 
-  // 収集した情報を更新する関数
+  // 収集した情報を更新する関数（課題ベースアプローチ対応）
   const updateCollectedInfo = (input) => {
     const newInfo = { ...collectedInfo };
     
-    // 利用目的の判定
+    // 課題から利用目的を推定
     if (!newInfo.use_purpose) {
-      if (input.includes('新たな事業') || input.includes('創業') || input.includes('起業')) {
+      if (input.includes('資金繰り') || input.includes('運転資金') || input.includes('資金調達')) {
         newInfo.use_purpose = '新たな事業を行いたい';
-      } else if (input.includes('設備') || input.includes('IT') || input.includes('DX')) {
+      } else if (input.includes('設備') || input.includes('老朽化') || input.includes('更新') || input.includes('導入')) {
         newInfo.use_purpose = '設備整備・IT導入をしたい';
-      } else if (input.includes('販路') || input.includes('海外')) {
-        newInfo.use_purpose = '販路拡大・海外展開をしたい';
-      } else if (input.includes('研究') || input.includes('開発')) {
+      } else if (input.includes('デジタル') || input.includes('IT') || input.includes('DX') || input.includes('効率化') || input.includes('自動化')) {
+        newInfo.use_purpose = '設備整備・IT導入をしたい';
+      } else if (input.includes('人材') || input.includes('人手不足') || input.includes('採用') || input.includes('育成') || input.includes('研修')) {
+        newInfo.use_purpose = '新たな事業を行いたい';
+      } else if (input.includes('商品開発') || input.includes('サービス開発') || input.includes('新商品') || input.includes('新サービス')) {
         newInfo.use_purpose = '研究開発・実証事業を行いたい';
+      } else if (input.includes('販路') || input.includes('市場開拓') || input.includes('海外') || input.includes('新市場')) {
+        newInfo.use_purpose = '販路拡大・海外展開をしたい';
+      } else if (input.includes('技術開発') || input.includes('研究開発') || input.includes('研究') || input.includes('開発')) {
+        newInfo.use_purpose = '研究開発・実証事業を行いたい';
+      } else if (input.includes('環境') || input.includes('省エネ') || input.includes('エネルギー')) {
+        newInfo.use_purpose = '設備整備・IT導入をしたい';
       }
     }
     
-    // 業種の判定
+    // 業種の判定（より幅広い表現に対応）
     if (!newInfo.industry) {
-      if (input.includes('製造業') || input.includes('製造')) {
+      if (input.includes('製造業') || input.includes('製造') || input.includes('工場') || input.includes('生産')) {
         newInfo.industry = '製造業';
-      } else if (input.includes('情報通信') || input.includes('IT') || input.includes('システム')) {
+      } else if (input.includes('情報通信') || input.includes('IT') || input.includes('システム') || input.includes('ソフトウェア') || input.includes('Web')) {
         newInfo.industry = '情報通信業';
-      } else if (input.includes('卸売') || input.includes('小売') || input.includes('販売')) {
+      } else if (input.includes('小売') || input.includes('卸売') || input.includes('販売') || input.includes('店舗') || input.includes('EC') || input.includes('通販')) {
         newInfo.industry = '卸売業，小売業';
-      } else if (input.includes('建設')) {
+      } else if (input.includes('建設') || input.includes('工事') || input.includes('建築')) {
         newInfo.industry = '建設業';
-      } else if (input.includes('サービス')) {
+      } else if (input.includes('飲食') || input.includes('レストラン') || input.includes('カフェ')) {
+        newInfo.industry = '宿泊業，飲食サービス業';
+      } else if (input.includes('医療') || input.includes('介護') || input.includes('福祉')) {
+        newInfo.industry = '医療，福祉';
+      } else if (input.includes('教育') || input.includes('学習') || input.includes('研修')) {
+        newInfo.industry = '教育，学習支援業';
+      } else if (input.includes('運送') || input.includes('物流') || input.includes('配送')) {
+        newInfo.industry = '運輸業，郵便業';
+      } else if (input.includes('サービス') || input.includes('コンサル') || input.includes('専門')) {
         newInfo.industry = 'サービス業（他に分類されないもの）';
       }
     }
@@ -426,21 +442,22 @@ ${apiSpec}
       }
     }
     
-    // 地域の判定
+    // 地域の判定（短縮形にも対応）
     if (!newInfo.target_area_search) {
-      const prefectures = [
-        '北海道', '青森県', '岩手県', '宮城県', '秋田県', '山形県', '福島県',
-        '茨城県', '栃木県', '群馬県', '埼玉県', '千葉県', '東京都', '神奈川県',
-        '新潟県', '富山県', '石川県', '福井県', '山梨県', '長野県', '岐阜県',
-        '静岡県', '愛知県', '三重県', '滋賀県', '京都府', '大阪府', '兵庫県',
-        '奈良県', '和歌山県', '鳥取県', '島根県', '岡山県', '広島県', '山口県',
-        '徳島県', '香川県', '愛媛県', '高知県', '福岡県', '佐賀県', '長崎県',
-        '熊本県', '大分県', '宮崎県', '鹿児島県', '沖縄県'
-      ];
+      const prefectureMap = {
+        '北海道': '北海道',
+        '青森': '青森県', '岩手': '岩手県', '宮城': '宮城県', '秋田': '秋田県', '山形': '山形県', '福島': '福島県',
+        '茨城': '茨城県', '栃木': '栃木県', '群馬': '群馬県', '埼玉': '埼玉県', '千葉': '千葉県', '東京': '東京都', '神奈川': '神奈川県',
+        '新潟': '新潟県', '富山': '富山県', '石川': '石川県', '福井': '福井県', '山梨': '山梨県', '長野': '長野県', '岐阜': '岐阜県',
+        '静岡': '静岡県', '愛知': '愛知県', '三重': '三重県', '滋賀': '滋賀県', '京都': '京都府', '大阪': '大阪府', '兵庫': '兵庫県',
+        '奈良': '奈良県', '和歌山': '和歌山県', '鳥取': '鳥取県', '島根': '島根県', '岡山': '岡山県', '広島': '広島県', '山口': '山口県',
+        '徳島': '徳島県', '香川': '香川県', '愛媛': '愛媛県', '高知': '高知県', '福岡': '福岡県', '佐賀': '佐賀県', '長崎': '長崎県',
+        '熊本': '熊本県', '大分': '大分県', '宮崎': '宮崎県', '鹿児島': '鹿児島県', '沖縄': '沖縄県'
+      };
       
-      for (const pref of prefectures) {
-        if (input.includes(pref)) {
-          newInfo.target_area_search = pref;
+      for (const [key, value] of Object.entries(prefectureMap)) {
+        if (input.includes(key)) {
+          newInfo.target_area_search = value;
           break;
         }
       }
