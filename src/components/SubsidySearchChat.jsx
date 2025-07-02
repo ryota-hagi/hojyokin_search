@@ -109,7 +109,7 @@ const SubsidySearchChat = () => {
   const getStorageSize = () => {
     let total = 0;
     for (let key in localStorage) {
-      if (localStorage.hasOwnProperty(key)) {
+      if (Object.prototype.hasOwnProperty.call(localStorage, key)) {
         total += localStorage[key].length + key.length;
       }
     }
@@ -321,19 +321,19 @@ ${apiSpec}
         console.error('Original response:', response);
         console.error('Cleaned response:', cleanedResponse);
         
-        // フォールバック - より洞察的な質問フロー
+        // 強化された初期質問フロー
         data = {
-          response: 'こんにちは！補助金検索のお手伝いをします😊\n\n**今、あなたのビジネスで一番解決したい課題は何ですか？**\n\n具体的な状況を教えていただければ、最適な補助金をご提案します：',
+          response: '🎯 **補助金検索AI コンサルタント**へようこそ！\n\n私は、あなたのビジネス課題を深く理解し、最適な補助金を見つける専門アシスタントです。\n\n**まず、現在のビジネス状況について教えてください：**\n\n📋 どのような課題を解決したいですか？具体的な状況を選択いただければ、あなたに最適化された質問と補助金をご提案します。',
           quickOptions: [
-            { label: '💰 資金繰りが厳しく、運転資金が必要', value: '資金繰りが厳しく運転資金が必要です' },
-            { label: '🏭 設備が古くなり、更新・導入が必要', value: '設備の老朽化で更新が必要です' },
-            { label: '👥 人手不足で、採用・育成に投資したい', value: '人材不足で採用や育成に投資が必要です' },
-            { label: '💻 業務効率化のためデジタル化したい', value: '業務効率化のためにデジタル化を進めたいです' },
-            { label: '📈 新商品・サービスを開発したい', value: '新しい商品やサービスの開発を考えています' },
-            { label: '🌍 新しい販路・市場を開拓したい', value: '新しい販路や市場の開拓を検討しています' },
-            { label: '🔬 技術開発・研究開発を行いたい', value: '技術開発や研究開発に取り組みたいです' },
-            { label: '🌱 環境・エネルギー対策を進めたい', value: '環境対策やエネルギー効率化を進めたいです' },
-            { label: '💭 その他の課題がある', value: 'その他の具体的な課題があります' }
+            { label: '💰 事業資金・運転資金の確保が課題', value: '事業の成長のために資金調達や運転資金の確保が課題となっています' },
+            { label: '🏭 生産設備・機械の更新・導入', value: '生産効率向上のため設備の更新や新しい機械の導入を検討しています' },
+            { label: '💻 業務のデジタル化・IT化推進', value: '業務効率化や競争力向上のためDXやIT化を進めたいと考えています' },
+            { label: '👥 人材確保・スキルアップ・組織強化', value: '人材不足の解決や既存社員のスキルアップ、組織体制の強化が必要です' },
+            { label: '🔬 新商品・新技術の研究開発', value: '競争力向上のため新商品開発や技術革新に取り組みたいです' },
+            { label: '🌍 新市場開拓・販路拡大・海外展開', value: '売上拡大のため新しい市場開拓や販路拡大を目指しています' },
+            { label: '🌱 環境対策・省エネ・持続可能経営', value: '環境負荷削減や省エネ、持続可能な経営への転換を考えています' },
+            { label: '🏢 事業承継・新規創業・第二創業', value: '事業承継の準備や新規創業、既存事業からの転換を検討しています' },
+            { label: '💭 複数の課題があり相談したい', value: '複数の課題を抱えており、どこから手をつけるべきか相談したいです' }
           ]
         };
       }
@@ -379,70 +379,126 @@ ${apiSpec}
     setConversationContext(prev => [...prev, { role, content }]);
   };
 
-  // 収集した情報を更新する関数（課題ベースアプローチ対応）
+  // 強化されたユーザー回答から検索条件を抽出する関数
   const updateCollectedInfo = (input) => {
     const newInfo = { ...collectedInfo };
+    const lowerInput = input.toLowerCase();
     
-    // 課題から利用目的を推定
+    // 具体的なニーズを保存
+    if (!newInfo.specific_needs) {
+      newInfo.specific_needs = input;
+    }
+    
+    // 課題から利用目的を高精度で推定（複数キーワード、文脈を考慮）
     if (!newInfo.use_purpose) {
-      if (input.includes('資金繰り') || input.includes('運転資金') || input.includes('資金調達')) {
-        newInfo.use_purpose = '新たな事業を行いたい';
-      } else if (input.includes('設備') || input.includes('老朽化') || input.includes('更新') || input.includes('導入')) {
-        newInfo.use_purpose = '設備整備・IT導入をしたい';
-      } else if (input.includes('デジタル') || input.includes('IT') || input.includes('DX') || input.includes('効率化') || input.includes('自動化')) {
-        newInfo.use_purpose = '設備整備・IT導入をしたい';
-      } else if (input.includes('人材') || input.includes('人手不足') || input.includes('採用') || input.includes('育成') || input.includes('研修')) {
-        newInfo.use_purpose = '新たな事業を行いたい';
-      } else if (input.includes('商品開発') || input.includes('サービス開発') || input.includes('新商品') || input.includes('新サービス')) {
-        newInfo.use_purpose = '研究開発・実証事業を行いたい';
-      } else if (input.includes('販路') || input.includes('市場開拓') || input.includes('海外') || input.includes('新市場')) {
-        newInfo.use_purpose = '販路拡大・海外展開をしたい';
-      } else if (input.includes('技術開発') || input.includes('研究開発') || input.includes('研究') || input.includes('開発')) {
-        newInfo.use_purpose = '研究開発・実証事業を行いたい';
-      } else if (input.includes('環境') || input.includes('省エネ') || input.includes('エネルギー')) {
-        newInfo.use_purpose = '設備整備・IT導入をしたい';
+      const purposePatterns = {
+        '新たな事業を行いたい': [
+          '新規事業', '事業拡大', '事業転換', '多角化', 'スタートアップ', '起業', 
+          '新分野', '新市場', '事業承継', '第二創業', '資金繰り', '運転資金',
+          '人材採用', '人材確保', '組織強化', '体制構築'
+        ],
+        '設備整備・IT導入をしたい': [
+          '設備更新', '設備導入', '機械導入', '工場', '生産設備', '製造設備',
+          'IT導入', 'DX', 'デジタル', 'システム', 'ソフトウェア', '自動化',
+          '効率化', 'ICT', 'AI', 'IoT', 'クラウド', '省エネ', '環境対策'
+        ],
+        '研究開発・実証事業を行いたい': [
+          '研究開発', '技術開発', '商品開発', 'R&D', '新技術', '特許',
+          'イノベーション', '実証実験', 'プロトタイプ', '試作', '新製品'
+        ],
+        '販路拡大・海外展開をしたい': [
+          '販路拡大', '市場開拓', '新市場', '海外展開', '輸出', '国際化',
+          'マーケティング', '営業強化', 'ブランディング', 'EC', 'オンライン'
+        ]
+      };
+      
+      for (const [purpose, keywords] of Object.entries(purposePatterns)) {
+        if (keywords.some(keyword => lowerInput.includes(keyword))) {
+          newInfo.use_purpose = purpose;
+          break;
+        }
       }
     }
     
-    // 業種の判定（より幅広い表現に対応）
+    // 業種の高精度判定（業界特有の用語も含める）
     if (!newInfo.industry) {
-      if (input.includes('製造業') || input.includes('製造') || input.includes('工場') || input.includes('生産')) {
-        newInfo.industry = '製造業';
-      } else if (input.includes('情報通信') || input.includes('IT') || input.includes('システム') || input.includes('ソフトウェア') || input.includes('Web')) {
-        newInfo.industry = '情報通信業';
-      } else if (input.includes('小売') || input.includes('卸売') || input.includes('販売') || input.includes('店舗') || input.includes('EC') || input.includes('通販')) {
-        newInfo.industry = '卸売業，小売業';
-      } else if (input.includes('建設') || input.includes('工事') || input.includes('建築')) {
-        newInfo.industry = '建設業';
-      } else if (input.includes('飲食') || input.includes('レストラン') || input.includes('カフェ')) {
-        newInfo.industry = '宿泊業，飲食サービス業';
-      } else if (input.includes('医療') || input.includes('介護') || input.includes('福祉')) {
-        newInfo.industry = '医療，福祉';
-      } else if (input.includes('教育') || input.includes('学習') || input.includes('研修')) {
-        newInfo.industry = '教育，学習支援業';
-      } else if (input.includes('運送') || input.includes('物流') || input.includes('配送')) {
-        newInfo.industry = '運輸業，郵便業';
-      } else if (input.includes('サービス') || input.includes('コンサル') || input.includes('専門')) {
-        newInfo.industry = 'サービス業（他に分類されないもの）';
+      const industryPatterns = {
+        '製造業': [
+          '製造', '工場', '生産', '加工', '組立', '部品', '材料', '金属',
+          '機械', '電子', '自動車', '化学', '食品', '繊維', '印刷'
+        ],
+        '情報通信業': [
+          'IT', 'システム', 'ソフトウェア', 'Web', 'アプリ', 'プログラム',
+          '通信', 'データ', 'AI', 'DX', 'クラウド', 'サーバー'
+        ],
+        '卸売業，小売業': [
+          '小売', '卸売', '販売', '店舗', 'EC', '通販', 'ネットショップ',
+          '商品', '仕入れ', '在庫', '流通', 'POS'
+        ],
+        '建設業': [
+          '建設', '工事', '建築', '土木', '設計', '施工', '住宅',
+          'リフォーム', '改修', '解体', '造成'
+        ],
+        '宿泊業，飲食サービス業': [
+          '飲食', 'レストラン', 'カフェ', '宿泊', 'ホテル', '旅館',
+          '観光', '料理', '接客', 'サービス業'
+        ],
+        '医療，福祉': [
+          '医療', '介護', '福祉', '病院', 'クリニック', 'ケア',
+          '看護', 'リハビリ', '健康', '薬局'
+        ],
+        '教育，学習支援業': [
+          '教育', '学習', '研修', '塾', 'スクール', '講座',
+          '人材育成', 'eラーニング', 'セミナー'
+        ],
+        '運輸業，郵便業': [
+          '運送', '物流', '配送', '輸送', '倉庫', '宅配',
+          'ロジスティクス', 'トラック', '海運', '航空'
+        ],
+        'サービス業（他に分類されないもの）': [
+          'サービス', 'コンサル', '専門', '技術サービス', '清掃',
+          '警備', 'メンテナンス', '修理', '相談'
+        ]
+      };
+      
+      for (const [industry, keywords] of Object.entries(industryPatterns)) {
+        if (keywords.some(keyword => lowerInput.includes(keyword))) {
+          newInfo.industry = industry;
+          break;
+        }
       }
     }
     
-    // 従業員数の判定
+    // 従業員数の詳細判定（数値表現も考慮）
     if (!newInfo.target_number_of_employees) {
-      if (input.includes('5名以下') || input.includes('5人以下')) {
-        newInfo.target_number_of_employees = '5名以下';
-      } else if (input.includes('20名以下') || input.includes('20人以下')) {
-        newInfo.target_number_of_employees = '20名以下';
-      } else if (input.includes('50名以下') || input.includes('50人以下')) {
-        newInfo.target_number_of_employees = '50名以下';
-      } else if (input.includes('100名以下') || input.includes('100人以下')) {
-        newInfo.target_number_of_employees = '100名以下';
-      } else if (input.includes('300名以下') || input.includes('300人以下')) {
-        newInfo.target_number_of_employees = '300名以下';
+      const employeePatterns = [
+        { range: '5名以下', keywords: ['5名以下', '5人以下', '個人事業', 'フリーランス', '1人', '2人', '3人', '4人', '5人'] },
+        { range: '20名以下', keywords: ['20名以下', '20人以下', '小規模', '10人', '15人', '20人'] },
+        { range: '50名以下', keywords: ['50名以下', '50人以下', '30人', '40人', '50人'] },
+        { range: '100名以下', keywords: ['100名以下', '100人以下', '中小企業', '60人', '80人', '100人'] },
+        { range: '300名以下', keywords: ['300名以下', '300人以下', '200人', '250人', '300人'] }
+      ];
+      
+      for (const pattern of employeePatterns) {
+        if (pattern.keywords.some(keyword => input.includes(keyword))) {
+          newInfo.target_number_of_employees = pattern.range;
+          break;
+        }
+      }
+      
+      // 数値パターンのマッチング
+      const numberMatch = input.match(/(\d+)名?人?/);
+      if (numberMatch && !newInfo.target_number_of_employees) {
+        const num = parseInt(numberMatch[1]);
+        if (num <= 5) newInfo.target_number_of_employees = '5名以下';
+        else if (num <= 20) newInfo.target_number_of_employees = '20名以下';
+        else if (num <= 50) newInfo.target_number_of_employees = '50名以下';
+        else if (num <= 100) newInfo.target_number_of_employees = '100名以下';
+        else if (num <= 300) newInfo.target_number_of_employees = '300名以下';
       }
     }
     
-    // 地域の判定（短縮形にも対応）
+    // 地域の判定（都道府県マッピング + 地域ブロック対応）
     if (!newInfo.target_area_search) {
       const prefectureMap = {
         '北海道': '北海道',
@@ -455,11 +511,42 @@ ${apiSpec}
         '熊本': '熊本県', '大分': '大分県', '宮崎': '宮崎県', '鹿児島': '鹿児島県', '沖縄': '沖縄県'
       };
       
+      // 直接的な都道府県名のマッチング
       for (const [key, value] of Object.entries(prefectureMap)) {
         if (input.includes(key)) {
           newInfo.target_area_search = value;
           break;
         }
+      }
+      
+      // 地域ブロック名のマッチング（関東、関西など）
+      if (!newInfo.target_area_search) {
+        const regionMap = {
+          '関東': '東京都',
+          '関西': '大阪府', 
+          '近畿': '大阪府',
+          '九州': '福岡県',
+          '東北': '宮城県',
+          '中部': '愛知県',
+          '北陸': '石川県',
+          '中国': '広島県',
+          '四国': '香川県'
+        };
+        
+        for (const [region, defaultPref] of Object.entries(regionMap)) {
+          if (input.includes(region)) {
+            newInfo.target_area_search = defaultPref;
+            break;
+          }
+        }
+      }
+    }
+    
+    // 予算情報の抽出
+    if (!newInfo.budget_range) {
+      const budgetMatch = input.match(/(\d+)(万円?|千万円?|億円?)/);
+      if (budgetMatch) {
+        newInfo.budget_range = budgetMatch[0];
       }
     }
     
@@ -506,61 +593,64 @@ ${apiSpec}
       return;
     }
 
+    // 動的な質問生成プロンプト - より洞察的で適応的
     const prompt = `
-ユーザーの最新の回答: "${input}"
+あなたは補助金検索の専門コンサルタントです。ユーザーとの対話から深い洞察を得て、最適な補助金をピンポイントで見つける使命があります。
 
-現在までの会話コンテキスト:
-${conversationContext.slice(-3).map(ctx => `${ctx.role}: ${ctx.content}`).join('\n')}
+【現在の状況分析】
+ユーザーの最新回答: "${input}"
+質問ラウンド: ${questionCount}/3
 
-現在収集済みの情報:
-- 利用目的: ${updatedInfo.use_purpose || '未収集'}
-- 業種: ${updatedInfo.industry || '未収集'}
-- 地域: ${updatedInfo.target_area_search || '未収集'}
-- 従業員数: ${updatedInfo.target_number_of_employees || '未収集'}
-- 具体的なニーズ: ${updatedInfo.specific_needs || '未収集'}
+【収集済み情報】
+- 利用目的: ${updatedInfo.use_purpose || '未特定'}
+- 業種: ${updatedInfo.industry || '未特定'} 
+- 地域: ${updatedInfo.target_area_search || '未特定'}
+- 従業員数: ${updatedInfo.target_number_of_employees || '未特定'}
+- 具体的課題: ${updatedInfo.specific_needs || '未特定'}
 
-重要：ユーザーの回答から以下を分析してください：
-1. ユーザーの本質的な課題は何か
-2. どんな補助金が最も役立つか
-3. 次に聞くべき最も重要な質問は何か
+【会話の流れ】
+${conversationContext.slice(-4).map((ctx, i) => `${i+1}. ${ctx.role}: ${ctx.content.substring(0, 100)}...`).join('\n')}
 
-質問回数: ${questionCount}/3（3回以内で必要な情報を収集してください）
+【あなたの使命】
+1. ユーザーの回答から「本当の課題」を見抜く
+2. その課題を解決する最適な補助金を特定するための戦略的質問を設計
+3. 業界特有の課題や地域性を考慮した深い質問をする
 
-会話履歴:
-${JSON.stringify(conversationContext.slice(-4))} // 最新4回分のみ
+【質問戦略】
+現在の回答「${input}」を深く分析し、以下の観点で次の質問を設計：
 
-補助金検索APIの仕様:
-${apiSpec}
+◆ 課題の具体化戦略
+- 設備投資なら→どんな課題を解決したい設備か？生産性？品質？環境？
+- デジタル化なら→現在の業務のどこにボトルネックがあるか？
+- 人材育成なら→どんなスキルギャップが事業成長を阻んでいるか？
+- 新事業なら→既存事業との関連性は？技術的優位性は？
 
-ユーザーの最新の入力: 「${input}」
+◆ 予算・規模感の把握
+- 投資予算レンジの確認（数十万〜数千万レベル）
+- 緊急度・実施時期の確認
+- 投資対効果への期待値
 
-【重要なルール】
-1. ユーザーの課題に基づいて、最も関連性の高い補助金を見つけるための質問をする
-2. 画一的な質問ではなく、前の回答を踏まえた具体的な質問をする
-3. 最大3つの質問で必要な情報を収集し、検索に移行する
-4. ユーザーの業界や状況に特化した選択肢を提供する
+◆ 地域・競合環境の理解
+- 地域特有の課題や機会
+- 同業他社との差別化ポイント
+- 地方創生との関連性
 
-次のステップを決定してください:
+【重要】以下の条件で次の行動を決定：
 
-【情報収集フェーズ】
-- ユーザーの課題や状況を深掘りする質問を1つ作成
-- その課題に関連する具体的な選択肢を提供
-- 例：
-  - 設備更新なら→具体的な設備の種類、予算規模、省エネ要件など
-  - IT化なら→導入したいシステム、解決したい業務課題、予算規模など
-  - 人材育成なら→必要なスキル、対象人数、研修内容など
+IF 質問回数 >= 3 OR 十分な情報収集完了
+→ shouldSearch: true, 最適な検索パラメータ生成
 
-【検索実行フェーズ】（3回質問後、または十分な情報が集まったら）
-- shouldSearch: trueにして、収集した情報から最適な検索条件を生成
-- multipleSearchParamsに複数の検索パターンを設定（幅広い結果を得るため）
+ELSE 
+→ ユーザーの回答に基づく戦略的な次の質問を1つ設計
+→ その課題領域に特化した洞察的な選択肢を4-6個提供
 
-JSONのみを返してください:
+【応答フォーマット】JSON形式で回答：
 {
-  "response": "ユーザーへの返答（進捗も含める）",
+  "response": "ユーザーの回答への共感的反応 + 次の戦略的質問（なぜその質問が重要かも説明）",
   "quickOptions": [
     {
-      "label": "選択肢のラベル（絵文字付き）",
-      "value": "選択した場合の返答文"
+      "label": "🎯 具体的で実用的な選択肢（絵文字付き）",
+      "value": "選択時の詳細な回答内容"
     }
   ],
   "multipleSearchParams": [
@@ -572,9 +662,9 @@ JSONのみを返してください:
       "target_number_of_employees": "${updatedInfo.target_number_of_employees || ''}"
     }
   ],
-  "shouldSearch": false,
-  "userNeeds": "ユーザーのニーズの要約",
-  "currentStage": "${questionCount >= 3 ? 'force_search' : 'collecting_info'}"
+  "shouldSearch": ${questionCount >= 3 ? 'true' : 'false'},
+  "userNeeds": "ユーザーの本質的なニーズの洞察",
+  "currentStage": "${questionCount >= 3 ? 'execute_search' : 'deep_discovery'}"
 }`;
 
     try {
@@ -665,13 +755,18 @@ JSONのみを返してください:
   };
 
   const performMultipleSearches = async (searchParamsList, userNeeds) => {
-    addMessage('bot', '条件に合う補助金を検索しています...');
+    addMessage('bot', '🔍 ユーザーのニーズに最適な補助金を検索しています...\n\n複数の検索戦略で幅広く調査中です。');
     
     let allResults = [];
     const resultsMap = new Map();
 
+    // 強化された検索戦略 - 複数のアプローチで補助金を発見
+    const enhancedSearchParams = generateSearchStrategies(searchParamsList);
+
     // 複数の検索パターンで検索を実行
-    for (const params of searchParamsList) {
+    for (const [strategyName, params] of enhancedSearchParams) {
+      console.log(`Executing search strategy: ${strategyName}`, params);
+      
       const searchParams = {
         keyword: params.keyword || '',
         sort: 'acceptance_end_datetime',
@@ -691,7 +786,7 @@ JSONのみを返してください:
           }
         });
         
-        console.log('API Request URL:', apiUrl.toString());
+        console.log(`API Request URL (${strategyName}):`, apiUrl.toString());
         
         const response = await fetch(apiUrl.toString(), {
           method: 'GET',
@@ -702,17 +797,17 @@ JSONのみを返してください:
         });
         
         if (!response.ok) {
-          throw new Error(`API Error: ${response.status} ${response.statusText}`);
+          console.warn(`API Error for strategy ${strategyName}: ${response.status} ${response.statusText}`);
+          continue; // 他の戦略を試す
         }
         
         const apiData = await response.json();
-        console.log('API Response:', apiData);
+        console.log(`API Response for ${strategyName}:`, apiData?.result?.length || 0, 'results');
         
         const apiResults = apiData.result || [];
         
         // 各補助金の詳細情報を取得
-        for (const subsidy of apiResults) {
-          // 詳細APIを呼び出して front_subsidy_detail_page_url を取得
+        for (const subsidy of apiResults.slice(0, 20)) { // 詳細取得は20件まで
           try {
             const detailUrl = new URL(`/api/jgrants/subsidies/id/${subsidy.id}`, window.location.origin);
             const detailResponse = await fetch(detailUrl.toString(), {
@@ -732,7 +827,8 @@ JSONのみを返してください:
                 ...detailResult,
                 detailUrl: detailResult.front_subsidy_detail_page_url || `https://jgrants.go.jp/`,
                 matchedKeywords: [params.keyword],
-                relevanceScore: calculateRelevanceScore(subsidy, userNeeds, params)
+                searchStrategy: strategyName,
+                relevanceScore: calculateAdvancedRelevanceScore(subsidy, userNeeds, params, strategyName)
               };
               
               if (!resultsMap.has(subsidy.id)) {
@@ -744,6 +840,8 @@ JSONのみを返してください:
                   existing.relevanceScore,
                   enrichedSubsidy.relevanceScore
                 );
+                // 複数の戦略でヒットした補助金は重要度アップ
+                existing.relevanceScore += 5;
               }
             }
           } catch (detailError) {
@@ -754,34 +852,33 @@ JSONのみを返してください:
                 ...subsidy,
                 detailUrl: 'https://jgrants.go.jp/',
                 matchedKeywords: [params.keyword],
-                relevanceScore: calculateRelevanceScore(subsidy, userNeeds, params)
+                searchStrategy: strategyName,
+                relevanceScore: calculateAdvancedRelevanceScore(subsidy, userNeeds, params, strategyName)
               });
             }
           }
         }
         
       } catch (error) {
-        console.error('Failed to fetch subsidies:', error);
-        
-        // エラーハンドリング
-        addMessage('bot', `補助金の検索中にエラーが発生しました：${error.message}\n\nプロキシサーバーが正しく設定されているか確認してください。`);
+        console.error(`Failed to fetch subsidies for strategy ${strategyName}:`, error);
+        // エラーは記録するが、他の戦略を続行
       }
     }
 
-    // 関連度でソート
+    // 関連度でソート（高度なスコアリング）
     allResults = Array.from(resultsMap.values())
       .sort((a, b) => b.relevanceScore - a.relevanceScore)
-      .slice(0, 10);
+      .slice(0, 15); // より多くの結果を保持
 
     if (allResults.length === 0) {
-      addMessage('bot', '申し訳ございません。条件に合う補助金が見つかりませんでした。\n\n条件を変更して再検索することをお勧めします。');
+      addMessage('bot', '💡 申し訳ございません。現在の条件では補助金が見つかりませんでした。\n\n以下のような理由が考えられます：\n- 検索条件が限定的すぎる\n- 該当する補助金の募集期間外\n- 地域や業種の制約\n\n条件を調整して再検索しましょう。');
       
       const retryOptions = [
-        { label: '🔄 条件を変更して再検索', value: '条件を変更して再検索したいです' },
-        { label: '💡 他の補助金を提案して', value: '他の補助金の提案をお願いします' },
-        { label: '❓ 補助金の探し方を教えて', value: '補助金の探し方について教えてください' },
-        { label: '📋 申請要件を確認したい', value: '補助金の申請要件について確認したいです' },
-        { label: '🏠 地域限定の補助金を探したい', value: '地域限定の補助金を探したいです' }
+        { label: '🔄 条件を緩和して再検索', value: '検索条件を緩和して再検索したいです' },
+        { label: '🏢 業種を変更して検索', value: '業種を変更して検索したいです' },
+        { label: '📍 地域を広げて検索', value: '地域を広げて検索したいです' },
+        { label: '💰 予算規模を変更して検索', value: '予算規模を変更して検索したいです' },
+        { label: '❓ 補助金の探し方を教えて', value: '効果的な補助金の探し方について教えてください' }
       ];
       setQuickOptions(retryOptions);
       return;
@@ -884,7 +981,139 @@ ${allResults.slice(0, 5).map((subsidy, index) => `
     }
   };
 
-  // 関連度スコア計算関数
+  // 複数の検索戦略を生成する関数
+  const generateSearchStrategies = (searchParamsList) => {
+    const strategies = [];
+    const baseParams = searchParamsList[0] || {};
+    
+    // 戦略1: 基本検索（提供されたパラメータをそのまま使用）
+    strategies.push(['基本検索', baseParams]);
+    
+    // 戦略2: キーワード重視検索
+    if (baseParams.use_purpose) {
+      const keywordVariations = {
+        '設備整備・IT導入をしたい': ['設備', 'IT', 'DX', 'デジタル', '機械'],
+        '新たな事業を行いたい': ['創業', '事業', '起業', '新規'],
+        '研究開発・実証事業を行いたい': ['研究', '開発', 'R&D', '技術'],
+        '販路拡大・海外展開をしたい': ['販路', '市場', '海外', '輸出']
+      };
+      
+      const keywords = keywordVariations[baseParams.use_purpose] || ['補助金'];
+      keywords.forEach((keyword) => {
+        strategies.push([`キーワード戦略_${keyword}`, {
+          ...baseParams,
+          keyword: keyword
+        }]);
+      });
+    }
+    
+    // 戦略3: 地域緩和検索（全国対象も含める）
+    if (baseParams.target_area_search) {
+      strategies.push(['地域拡張検索', {
+        ...baseParams,
+        target_area_search: '' // 地域制限を外す
+      }]);
+    }
+    
+    // 戦略4: 従業員数緩和検索
+    if (baseParams.target_number_of_employees) {
+      const relaxedEmployeeOptions = {
+        '5名以下': ['20名以下', '50名以下'],
+        '20名以下': ['50名以下', '100名以下'],
+        '50名以下': ['100名以下', '300名以下']
+      };
+      
+      const options = relaxedEmployeeOptions[baseParams.target_number_of_employees];
+      if (options) {
+        options.forEach(option => {
+          strategies.push([`従業員数拡張_${option}`, {
+            ...baseParams,
+            target_number_of_employees: option
+          }]);
+        });
+      }
+    }
+    
+    // 戦略5: 業種拡張検索
+    if (baseParams.industry) {
+      const relatedIndustries = {
+        '製造業': ['建設業', '卸売業，小売業'],
+        '情報通信業': ['サービス業（他に分類されないもの）', '卸売業，小売業'],
+        '卸売業，小売業': ['製造業', 'サービス業（他に分類されないもの）']
+      };
+      
+      const related = relatedIndustries[baseParams.industry];
+      if (related) {
+        related.forEach(industry => {
+          strategies.push([`業種拡張_${industry}`, {
+            ...baseParams,
+            industry: industry
+          }]);
+        });
+      }
+    }
+    
+    // 戦略6: 汎用検索（制約を最小限に）
+    strategies.push(['汎用検索', {
+      keyword: '補助金',
+      use_purpose: baseParams.use_purpose || '',
+      industry: '',
+      target_area_search: '',
+      target_number_of_employees: ''
+    }]);
+    
+    return strategies;
+  };
+
+  // 高度な関連度スコア計算関数
+  const calculateAdvancedRelevanceScore = (subsidy, userNeeds, searchParams, strategyName) => {
+    let score = 0;
+    
+    // 基本スコア計算
+    score += calculateRelevanceScore(subsidy, userNeeds, searchParams);
+    
+    // 戦略別ボーナス
+    const strategyBonus = {
+      '基本検索': 20,
+      'キーワード戦略': 15,
+      '地域拡張検索': 5,
+      '従業員数拡張': 5,
+      '業種拡張': 8,
+      '汎用検索': 2
+    };
+    
+    for (const [strategy, bonus] of Object.entries(strategyBonus)) {
+      if (strategyName.includes(strategy)) {
+        score += bonus;
+        break;
+      }
+    }
+    
+    // 補助金額によるスコア調整
+    if (subsidy.subsidy_max_limit) {
+      const amount = subsidy.subsidy_max_limit;
+      if (amount >= 1000000) score += 10; // 100万円以上
+      if (amount >= 5000000) score += 5;  // 500万円以上
+      if (amount >= 10000000) score += 5; // 1000万円以上
+    }
+    
+    // タイトルとユーザーニーズの関連性
+    if (subsidy.title && userNeeds) {
+      const titleLower = subsidy.title.toLowerCase();
+      const needsLower = userNeeds.toLowerCase();
+      
+      const keyPhrases = ['効率化', '省エネ', '生産性', 'DX', 'デジタル', '人材', '設備', '技術'];
+      keyPhrases.forEach(phrase => {
+        if (titleLower.includes(phrase) && needsLower.includes(phrase)) {
+          score += 8;
+        }
+      });
+    }
+    
+    return score;
+  };
+
+  // 基本の関連度スコア計算関数（互換性維持）
   const calculateRelevanceScore = (subsidy, userNeeds, searchParams) => {
     let score = 0;
     
@@ -926,15 +1155,15 @@ ${allResults.slice(0, 5).map((subsidy, index) => `
       }
     }
     
-    // 募集期間の考慮（締切が近いものは優先度を下げる）
+    // 募集期間の考慮
     if (subsidy.acceptance_end_datetime) {
       const daysUntilEnd = Math.floor(
         (new Date(subsidy.acceptance_end_datetime) - new Date()) / (1000 * 60 * 60 * 24)
       );
       if (daysUntilEnd > 30 && daysUntilEnd < 180) {
-        score += 5; // 適切な期間内
+        score += 5;
       } else if (daysUntilEnd <= 30) {
-        score -= 5; // 締切が近すぎる
+        score -= 5;
       }
     }
     
